@@ -1,19 +1,20 @@
 import { DeliveryAttempt } from '../types/index.js';
 
-const store = new Map<string, DeliveryAttempt[]>();
+export interface DeliveryStore {
+  append(attempt: DeliveryAttempt): void;
+  findBySubscriptionId(subscriptionId: string): DeliveryAttempt[];
+}
 
-export const deliveryStore = {
-  append(attempt: DeliveryAttempt): void {
-    const existing = store.get(attempt.subscriptionId) ?? [];
-    store.set(attempt.subscriptionId, [...existing, attempt]);
-  },
+export function createDeliveryStore(): DeliveryStore {
+  const store = new Map<string, DeliveryAttempt[]>();
 
-  findBySubscriptionId(subscriptionId: string): DeliveryAttempt[] {
-    return store.get(subscriptionId) ?? [];
-  },
-
-  /** Clears all data — used in tests only. */
-  _reset(): void {
-    store.clear();
-  },
-};
+  return {
+    append(attempt) {
+      const existing = store.get(attempt.subscriptionId) ?? [];
+      store.set(attempt.subscriptionId, [...existing, attempt]);
+    },
+    findBySubscriptionId(subscriptionId) {
+      return store.get(subscriptionId) ?? [];
+    },
+  };
+}

@@ -1,14 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
-import { subscriptionStore } from '../dal/subscription.store.js';
-import { deliveryStore } from '../dal/delivery.store.js';
 
-const app = createApp();
+let app: ReturnType<typeof createApp>;
 
 beforeEach(() => {
-  subscriptionStore._reset();
-  deliveryStore._reset();
+  app = createApp(); // fresh stores on every test — no shared state
 });
 
 describe('POST /subscriptions', () => {
@@ -97,9 +94,7 @@ describe('DELETE /subscriptions/:id', () => {
       .post('/subscriptions')
       .send({ targetUrl: 'https://example.com/hook', events: ['token.revoked'] });
 
-    const { id } = createRes.body;
-
-    const deleteRes = await request(app).delete(`/subscriptions/${id}`);
+    const deleteRes = await request(app).delete(`/subscriptions/${createRes.body.id}`);
     expect(deleteRes.status).toBe(204);
 
     const listRes = await request(app).get('/subscriptions');

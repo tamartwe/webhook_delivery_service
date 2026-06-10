@@ -1,19 +1,26 @@
-import { subscriptionService } from './subscription.service.js';
-import { deliveryService } from './delivery.service.js';
+import { SubscriptionService } from './subscription.service.js';
+import { DeliveryService } from './delivery.service.js';
 import { logger } from '../lib/logger.js';
 import { KnownEventType } from '../types/index.js';
 
-export const eventService = {
-  ingest(type: KnownEventType, payload: Record<string, unknown>): void {
-    const subscribers = subscriptionService.findByEventType(type);
+export function createEventService(
+  subscriptionSvc: SubscriptionService,
+  deliverySvc: DeliveryService,
+) {
+  return {
+    ingest(type: KnownEventType, payload: Record<string, unknown>): void {
+      const subscribers = subscriptionSvc.findByEventType(type);
 
-    logger.info(
-      { eventType: type, subscriberCount: subscribers.length },
-      'Event ingested, fanning out deliveries',
-    );
+      logger.info(
+        { eventType: type, subscriberCount: subscribers.length },
+        'Event ingested, fanning out deliveries',
+      );
 
-    subscribers.forEach((sub) => {
-      deliveryService.scheduleDelivery(sub, type, payload);
-    });
-  },
-};
+      subscribers.forEach((sub) => {
+        deliverySvc.scheduleDelivery(sub, type, payload);
+      });
+    },
+  };
+}
+
+export type EventService = ReturnType<typeof createEventService>;

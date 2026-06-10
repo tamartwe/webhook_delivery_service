@@ -1,11 +1,13 @@
 import { Router } from 'express';
-import { subscriptionsController } from '../controllers/subscriptions.controller.js';
+import { createSubscriptionsController } from '../controllers/subscriptions.controller.js';
 
-const router = Router();
-
-router.post('/', subscriptionsController.create);
-router.get('/', subscriptionsController.list);
-router.delete('/:id', subscriptionsController.remove);
-router.get('/:id/deliveries', subscriptionsController.getDeliveries);
-
-export default router;
+export function createSubscriptionsRouter(
+  controller: ReturnType<typeof createSubscriptionsController>,
+): Router {
+  const router = Router();
+  router.post('/', controller.create);
+  router.get('/', controller.list);
+  router.delete('/:id', controller.remove);
+  router.get('/:id/deliveries', controller.getDeliveries);
+  return router;
+}

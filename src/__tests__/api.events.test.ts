@@ -1,14 +1,11 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
-import { subscriptionStore } from '../dal/subscription.store.js';
-import { deliveryStore } from '../dal/delivery.store.js';
 
-const app = createApp();
+let app: ReturnType<typeof createApp>;
 
 beforeEach(() => {
-  subscriptionStore._reset();
-  deliveryStore._reset();
+  app = createApp(); // fresh stores on every test — no shared state
 });
 
 afterEach(() => {
@@ -57,7 +54,6 @@ describe('POST /events — delivery fan-out (fake timers)', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal('fetch', fetchMock);
 
-    // Register two subscribers for token.revoked
     await request(app)
       .post('/subscriptions')
       .send({ targetUrl: 'https://hook-a.com/recv', events: ['token.revoked'] });
@@ -66,7 +62,7 @@ describe('POST /events — delivery fan-out (fake timers)', () => {
       .post('/subscriptions')
       .send({ targetUrl: 'https://hook-b.com/recv', events: ['token.revoked'] });
 
-    // Register one subscriber for a different event
+    // Different event type — must NOT receive this delivery
     await request(app)
       .post('/subscriptions')
       .send({ targetUrl: 'https://hook-c.com/recv', events: ['app.discovered'] });
@@ -75,10 +71,8 @@ describe('POST /events — delivery fan-out (fake timers)', () => {
       .post('/events')
       .send({ type: 'token.revoked', payload: { userId: 'u1' } });
 
-    // Let async delivery tasks execute
     await vi.runAllTimersAsync();
 
-    // Only the two token.revoked subscribers should be called
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const calledUrls = fetchMock.mock.calls.map((args: unknown[]) => args[0] as string);
     expect(calledUrls).toContain('https://hook-a.com/recv');

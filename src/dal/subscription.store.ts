@@ -1,30 +1,31 @@
 import { Subscription, KnownEventType } from '../types/index.js';
 
-const store = new Map<string, Subscription>();
+export interface SubscriptionStore {
+  save(sub: Subscription): void;
+  findById(id: string): Subscription | undefined;
+  findAll(): Subscription[];
+  delete(id: string): void;
+  findByEventType(type: KnownEventType): Subscription[];
+}
 
-export const subscriptionStore = {
-  save(sub: Subscription): void {
-    store.set(sub.id, sub);
-  },
+export function createSubscriptionStore(): SubscriptionStore {
+  const store = new Map<string, Subscription>();
 
-  findById(id: string): Subscription | undefined {
-    return store.get(id);
-  },
-
-  findAll(): Subscription[] {
-    return Array.from(store.values());
-  },
-
-  delete(id: string): void {
-    store.delete(id);
-  },
-
-  findByEventType(type: KnownEventType): Subscription[] {
-    return Array.from(store.values()).filter((sub) => sub.events.includes(type));
-  },
-
-  /** Clears all data — used in tests only. */
-  _reset(): void {
-    store.clear();
-  },
-};
+  return {
+    save(sub) {
+      store.set(sub.id, sub);
+    },
+    findById(id) {
+      return store.get(id);
+    },
+    findAll() {
+      return Array.from(store.values());
+    },
+    delete(id) {
+      store.delete(id);
+    },
+    findByEventType(type) {
+      return Array.from(store.values()).filter((sub) => sub.events.includes(type));
+    },
+  };
+}

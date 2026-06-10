@@ -1,8 +1,7 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createHmac } from 'crypto';
-import { deliveryService } from '../services/delivery.service.js';
-import { deliveryStore } from '../dal/delivery.store.js';
-import { subscriptionStore } from '../dal/subscription.store.js';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { createDeliveryService } from '../services/delivery.service.js';
+import { createDeliveryStore } from '../dal/delivery.store.js';
 import { Subscription } from '../types/index.js';
 
 const makeSub = (overrides: Partial<Subscription> = {}): Subscription => ({
@@ -13,9 +12,10 @@ const makeSub = (overrides: Partial<Subscription> = {}): Subscription => ({
   ...overrides,
 });
 
+let service: ReturnType<typeof createDeliveryService>;
+
 beforeEach(() => {
-  deliveryStore._reset();
-  subscriptionStore._reset();
+  service = createDeliveryService(createDeliveryStore()); // fresh store per test
   vi.useFakeTimers();
 });
 
@@ -30,12 +30,11 @@ describe('deliveryService — successful delivery', () => {
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
 
-    deliveryService.scheduleDelivery(sub, 'token.revoked', { userId: 'u1' });
+    service.scheduleDelivery(sub, 'token.revoked', { userId: 'u1' });
 
-    // Allow all micro/macro tasks to settle
     await vi.runAllTimersAsync();
 
-    const history = deliveryService.getHistory(sub.id);
+    const history = service.getHistory(sub.id);
     expect(history).toHaveLength(1);
     expect(history[0].status).toBe('success');
     expect(history[0].attemptNumber).toBe(1);
@@ -49,11 +48,11 @@ describe('deliveryService — retry on failure', () => {
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503 }));
 
-    deliveryService.scheduleDelivery(sub, 'token.revoked', {});
+    service.scheduleDelivery(sub, 'token.revoked', {});
 
     await vi.runAllTimersAsync();
 
-    const history = deliveryService.getHistory(sub.id);
+    const history = service.getHistory(sub.id);
     expect(history).toHaveLength(3);
     expect(history.map((a) => a.attemptNumber)).toEqual([1, 2, 3]);
     expect(history.every((a) => a.status === 'failed')).toBe(true);
@@ -68,11 +67,11 @@ describe('deliveryService — retry on failure', () => {
 
     vi.stubGlobal('fetch', fetchMock);
 
-    deliveryService.scheduleDelivery(sub, 'token.revoked', {});
+    service.scheduleDelivery(sub, 'token.revoked', {});
 
     await vi.runAllTimersAsync();
 
-    const history = deliveryService.getHistory(sub.id);
+    const history = service.getHistory(sub.id);
     expect(history).toHaveLength(2);
     expect(history[0].status).toBe('failed');
     expect(history[1].status).toBe('success');
@@ -89,7 +88,7 @@ describe('deliveryService — HMAC signing', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal('fetch', fetchMock);
 
-    deliveryService.scheduleDelivery(sub, 'token.revoked', payload);
+    service.scheduleDelivery(sub, 'token.revoked', payload);
     await vi.runAllTimersAsync();
 
     const [, callOptions] = fetchMock.mock.calls[0] as [
@@ -108,7 +107,7 @@ describe('deliveryService — HMAC signing', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal('fetch', fetchMock);
 
-    deliveryService.scheduleDelivery(sub, 'token.revoked', {});
+    service.scheduleDelivery(sub, 'token.revoked', {});
     await vi.runAllTimersAsync();
 
     const [, callOptions] = fetchMock.mock.calls[0] as [
