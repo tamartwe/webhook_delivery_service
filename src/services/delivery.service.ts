@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { DeliveryStore } from '../dal/delivery.store.js';
 import { signPayload } from '../lib/hmac.js';
 import { logger } from '../lib/logger.js';
@@ -54,7 +54,7 @@ export function createDeliveryService(store: DeliveryStore) {
     }
 
     store.append({
-      id: uuidv4(),
+      id: randomUUID(),
       subscriptionId: subscription.id,
       eventType,
       payload,

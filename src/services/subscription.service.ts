@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { SubscriptionStore } from '../dal/subscription.store.js';
 import { NotFoundError } from '../lib/errors.js';
 import {
@@ -23,7 +23,7 @@ export function createSubscriptionService(store: SubscriptionStore) {
     /** Creates a subscription and returns the public view (no secret). */
     create(input: CreateSubscriptionInput): PublicSubscription {
       const sub: Subscription = {
-        id: uuidv4(),
+        id: randomUUID(),
         targetUrl: input.targetUrl,
         events: input.events,
         secret: input.secret,
