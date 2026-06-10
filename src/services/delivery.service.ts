@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { DeliveryStore } from '../dal/delivery.store.js';
 import { signPayload } from '../lib/hmac.js';
 import { logger } from '../lib/logger.js';
-import { DeliveryAttempt, KnownEventType, Subscription } from '../types/index.js';
+import { DeliveryAttempt, PaginatedResult, KnownEventType, Subscription } from '../types/index.js';
 
 const MAX_ATTEMPTS = 3;
 
@@ -118,8 +118,12 @@ export function createDeliveryService(store: DeliveryStore) {
       });
     },
 
-    getHistory(subscriptionId: string): DeliveryAttempt[] {
-      return store.findBySubscriptionId(subscriptionId);
+    getHistory(
+      subscriptionId: string,
+      page: number,
+      limit: number,
+    ): PaginatedResult<DeliveryAttempt> {
+      return store.findPaginated(subscriptionId, page, limit);
     },
   };
 }

@@ -17,6 +17,14 @@ export interface Subscription {
 /** Safe for HTTP responses — secret is never exposed to callers. */
 export type PublicSubscription = Omit<Subscription, 'secret'>;
 
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  totalPages: number;
+  page: number;
+  limit: number;
+}
+
 export type DeliveryStatus = 'success' | 'failed';
 
 export interface DeliveryAttempt {

@@ -27,9 +27,10 @@ describe('subscriptionService.create', () => {
       events: ['token.revoked'],
     });
 
-    const list = service.list();
-    expect(list).toHaveLength(1);
-    expect(list[0].events).toContain('token.revoked');
+    const result = service.list(1, 20);
+    expect(result.data).toHaveLength(1);
+    expect(result.total).toBe(1);
+    expect(result.data[0].events).toContain('token.revoked');
   });
 
   it('accepts a secret but does not return it in the public view', () => {
@@ -50,7 +51,7 @@ describe('subscriptionService.delete', () => {
     });
 
     service.delete(sub.id);
-    expect(service.list()).toHaveLength(0);
+    expect(service.list(1, 20).total).toBe(0);
   });
 
   it('throws NotFoundError for a non-existent id', () => {

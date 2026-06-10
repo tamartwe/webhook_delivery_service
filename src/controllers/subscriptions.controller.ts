@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { createSubscriptionSchema } from '../schemas/subscription.schema.js';
+import { paginationSchema } from '../schemas/pagination.schema.js';
 import { SubscriptionService } from '../services/subscription.service.js';
 import { DeliveryService } from '../services/delivery.service.js';
 import { ValidationError } from '../lib/errors.js';
@@ -33,9 +34,15 @@ export function createSubscriptionsController(
       }
     },
 
-    list(_req: Request, res: Response, next: NextFunction): void {
+    list(req: Request, res: Response, next: NextFunction): void {
       try {
-        res.status(200).json(subscriptionSvc.list());
+        const parsed = paginationSchema.safeParse(req.query);
+        if (!parsed.success) {
+          next(new ValidationError('Invalid pagination params', parsed.error.flatten()));
+          return;
+        }
+        const { page, limit } = parsed.data;
+        res.status(200).json(subscriptionSvc.list(page, limit));
       } catch (err) {
         next(err);
       }
@@ -45,7 +52,14 @@ export function createSubscriptionsController(
       try {
         const id = String(req.params.id);
         subscriptionSvc.getById(id); // verifies the subscription exists
-        res.status(200).json(deliverySvc.getHistory(id));
+
+        const parsed = paginationSchema.safeParse(req.query);
+        if (!parsed.success) {
+          next(new ValidationError('Invalid pagination params', parsed.error.flatten()));
+          return;
+        }
+        const { page, limit } = parsed.data;
+        res.status(200).json(deliverySvc.getHistory(id, page, limit));
       } catch (err) {
         next(err);
       }

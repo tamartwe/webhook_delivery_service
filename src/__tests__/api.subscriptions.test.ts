@@ -67,24 +67,72 @@ describe('POST /subscriptions', () => {
 });
 
 describe('GET /subscriptions', () => {
-  it('returns an empty array when there are no subscriptions', async () => {
+  it('returns a paginated result with correct shape when empty', async () => {
     const res = await request(app).get('/subscriptions');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body).toMatchObject({ data: [], total: 0, totalPages: 0, page: 1, limit: 20 });
   });
 
-  it('returns all registered subscriptions', async () => {
+  it('returns all subscriptions within a page', async () => {
     await request(app)
       .post('/subscriptions')
       .send({ targetUrl: 'https://a.com/hook', events: ['token.revoked'] });
-
     await request(app)
       .post('/subscriptions')
       .send({ targetUrl: 'https://b.com/hook', events: ['app.discovered'] });
 
     const res = await request(app).get('/subscriptions');
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(2);
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.total).toBe(2);
+    expect(res.body.totalPages).toBe(1);
+  });
+
+  it('paginates correctly — first page returns limit items', async () => {
+    await Promise.all(
+      Array.from({ length: 5 }, (_, i) =>
+        request(app)
+          .post('/subscriptions')
+          .send({ targetUrl: `https://hook-${i}.com`, events: ['token.revoked'] }),
+      ),
+    );
+
+    const res = await request(app).get('/subscriptions').query({ page: 1, limit: 3 });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(3);
+    expect(res.body.total).toBe(5);
+    expect(res.body.totalPages).toBe(2);
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(3);
+  });
+
+  it('paginates correctly — second page returns remaining items', async () => {
+    await Promise.all(
+      Array.from({ length: 5 }, (_, i) =>
+        request(app)
+          .post('/subscriptions')
+          .send({ targetUrl: `https://hook-${i}.com`, events: ['token.revoked'] }),
+      ),
+    );
+
+    const res = await request(app).get('/subscriptions').query({ page: 2, limit: 3 });
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.totalPages).toBe(2);
+    expect(res.body.page).toBe(2);
+  });
+
+  it('returns 400 for invalid pagination params', async () => {
+    const res = await request(app).get('/subscriptions').query({ page: 0 });
+    expect(res.status).toBe(400);
+  });
+
+  it('does not include secret in any subscription in the response', async () => {
+    await request(app)
+      .post('/subscriptions')
+      .send({ targetUrl: 'https://a.com/hook', events: ['token.revoked'], secret: 'shh' });
+
+    const res = await request(app).get('/subscriptions');
+    expect(res.body.data[0]).not.toHaveProperty('secret');
   });
 });
 
@@ -98,7 +146,7 @@ describe('DELETE /subscriptions/:id', () => {
     expect(deleteRes.status).toBe(204);
 
     const listRes = await request(app).get('/subscriptions');
-    expect(listRes.body).toHaveLength(0);
+    expect(listRes.body.total).toBe(0);
   });
 
   it('returns 404 for a non-existent subscription id', async () => {
@@ -109,7 +157,7 @@ describe('DELETE /subscriptions/:id', () => {
 });
 
 describe('GET /subscriptions/:id/deliveries', () => {
-  it('returns an empty array for a subscription with no deliveries', async () => {
+  it('returns a paginated result with correct shape when no deliveries exist', async () => {
     const createRes = await request(app)
       .post('/subscriptions')
       .send({ targetUrl: 'https://example.com/hook', events: ['token.revoked'] });
@@ -117,11 +165,23 @@ describe('GET /subscriptions/:id/deliveries', () => {
     const res = await request(app).get(`/subscriptions/${createRes.body.id}/deliveries`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body).toMatchObject({ data: [], total: 0, totalPages: 0, page: 1, limit: 20 });
   });
 
   it('returns 404 for a non-existent subscription id', async () => {
     const res = await request(app).get('/subscriptions/non-existent-id/deliveries');
     expect(res.status).toBe(404);
+  });
+
+  it('returns 400 for invalid pagination params', async () => {
+    const createRes = await request(app)
+      .post('/subscriptions')
+      .send({ targetUrl: 'https://example.com/hook', events: ['token.revoked'] });
+
+    const res = await request(app)
+      .get(`/subscriptions/${createRes.body.id}/deliveries`)
+      .query({ limit: 0 });
+
+    expect(res.status).toBe(400);
   });
 });

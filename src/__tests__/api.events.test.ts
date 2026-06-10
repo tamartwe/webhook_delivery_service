@@ -98,10 +98,11 @@ describe('POST /events — delivery fan-out (fake timers)', () => {
     const deliveriesRes = await request(app).get(`/subscriptions/${subId}/deliveries`);
 
     expect(deliveriesRes.status).toBe(200);
-    expect(deliveriesRes.body).toHaveLength(1);
-    expect(deliveriesRes.body[0].status).toBe('success');
-    expect(deliveriesRes.body[0].eventType).toBe('app.discovered');
-    expect(deliveriesRes.body[0].attemptNumber).toBe(1);
+    expect(deliveriesRes.body.data).toHaveLength(1);
+    expect(deliveriesRes.body.total).toBe(1);
+    expect(deliveriesRes.body.data[0].status).toBe('success');
+    expect(deliveriesRes.body.data[0].eventType).toBe('app.discovered');
+    expect(deliveriesRes.body.data[0].attemptNumber).toBe(1);
   });
 
   it('delivery history reflects retries on repeated failure', async () => {
@@ -122,7 +123,10 @@ describe('POST /events — delivery fan-out (fake timers)', () => {
     const deliveriesRes = await request(app).get(`/subscriptions/${subId}/deliveries`);
 
     expect(deliveriesRes.status).toBe(200);
-    expect(deliveriesRes.body).toHaveLength(3);
-    expect(deliveriesRes.body.every((d: { status: string }) => d.status === 'failed')).toBe(true);
+    expect(deliveriesRes.body.data).toHaveLength(3);
+    expect(deliveriesRes.body.total).toBe(3);
+    expect(deliveriesRes.body.data.every((d: { status: string }) => d.status === 'failed')).toBe(
+      true,
+    );
   });
 });

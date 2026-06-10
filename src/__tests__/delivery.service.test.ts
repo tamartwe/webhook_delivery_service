@@ -34,11 +34,12 @@ describe('deliveryService — successful delivery', () => {
 
     await vi.runAllTimersAsync();
 
-    const history = service.getHistory(sub.id);
-    expect(history).toHaveLength(1);
-    expect(history[0].status).toBe('success');
-    expect(history[0].attemptNumber).toBe(1);
-    expect(history[0].httpStatus).toBe(200);
+    const history = service.getHistory(sub.id, 1, 20);
+    expect(history.data).toHaveLength(1);
+    expect(history.total).toBe(1);
+    expect(history.data[0].status).toBe('success');
+    expect(history.data[0].attemptNumber).toBe(1);
+    expect(history.data[0].httpStatus).toBe(200);
   });
 });
 
@@ -52,10 +53,11 @@ describe('deliveryService — retry on failure', () => {
 
     await vi.runAllTimersAsync();
 
-    const history = service.getHistory(sub.id);
-    expect(history).toHaveLength(3);
-    expect(history.map((a) => a.attemptNumber)).toEqual([1, 2, 3]);
-    expect(history.every((a) => a.status === 'failed')).toBe(true);
+    const history = service.getHistory(sub.id, 1, 20);
+    expect(history.data).toHaveLength(3);
+    expect(history.total).toBe(3);
+    expect(history.data.map((a) => a.attemptNumber)).toEqual([1, 2, 3]);
+    expect(history.data.every((a) => a.status === 'failed')).toBe(true);
   });
 
   it('stops retrying after a successful attempt', async () => {
@@ -71,10 +73,11 @@ describe('deliveryService — retry on failure', () => {
 
     await vi.runAllTimersAsync();
 
-    const history = service.getHistory(sub.id);
-    expect(history).toHaveLength(2);
-    expect(history[0].status).toBe('failed');
-    expect(history[1].status).toBe('success');
+    const history = service.getHistory(sub.id, 1, 20);
+    expect(history.data).toHaveLength(2);
+    expect(history.total).toBe(2);
+    expect(history.data[0].status).toBe('failed');
+    expect(history.data[1].status).toBe('success');
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

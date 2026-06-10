@@ -1,7 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import { SubscriptionStore } from '../dal/subscription.store.js';
 import { NotFoundError } from '../lib/errors.js';
-import { Subscription, PublicSubscription, KnownEventType } from '../types/index.js';
+import {
+  Subscription,
+  PublicSubscription,
+  PaginatedResult,
+  KnownEventType,
+} from '../types/index.js';
 import { CreateSubscriptionInput } from '../schemas/subscription.schema.js';
 
 function toPublic(sub: Subscription): PublicSubscription {
@@ -34,9 +39,10 @@ export function createSubscriptionService(store: SubscriptionStore) {
       store.delete(id);
     },
 
-    /** Returns all subscriptions without secrets. */
-    list(): PublicSubscription[] {
-      return store.findAll().map(toPublic);
+    /** Returns a paginated page of subscriptions without secrets. */
+    list(page: number, limit: number): PaginatedResult<PublicSubscription> {
+      const result = store.findPaginated(page, limit);
+      return { ...result, data: result.data.map(toPublic) };
     },
 
     /** Internal use only — returns full Subscription including secret for HMAC signing. */
