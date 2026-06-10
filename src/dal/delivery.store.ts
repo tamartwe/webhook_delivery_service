@@ -14,8 +14,10 @@ export function createDeliveryStore(): DeliveryStore {
 
   return {
     append(attempt) {
-      const existing = store.get(attempt.subscriptionId) ?? [];
-      store.set(attempt.subscriptionId, [...existing, attempt]);
+      if (!store.has(attempt.subscriptionId)) {
+        store.set(attempt.subscriptionId, []);
+      }
+      store.get(attempt.subscriptionId)!.push(attempt);
     },
 
     findPaginated(subscriptionId, page, limit) {
