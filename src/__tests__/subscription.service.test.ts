@@ -32,13 +32,13 @@ describe('subscriptionService.create', () => {
     expect(list[0].events).toContain('token.revoked');
   });
 
-  it('preserves an optional secret', () => {
+  it('accepts a secret but does not return it in the public view', () => {
     const sub = service.create({
       targetUrl: 'https://example.com/hook',
       events: ['privilege.escalation'],
       secret: 'my-secret',
     });
-    expect(sub.secret).toBe('my-secret');
+    expect('secret' in sub).toBe(false);
   });
 });
 

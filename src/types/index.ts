@@ -14,6 +14,9 @@ export interface Subscription {
   createdAt: Date;
 }
 
+/** Safe for HTTP responses — secret is never exposed to callers. */
+export type PublicSubscription = Omit<Subscription, 'secret'>;
+
 export type DeliveryStatus = 'success' | 'failed';
 
 export interface DeliveryAttempt {

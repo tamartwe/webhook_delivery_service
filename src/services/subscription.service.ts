@@ -1,12 +1,22 @@
 import { v4 as uuidv4 } from 'uuid';
 import { SubscriptionStore } from '../dal/subscription.store.js';
 import { NotFoundError } from '../lib/errors.js';
-import { Subscription, KnownEventType } from '../types/index.js';
+import { Subscription, PublicSubscription, KnownEventType } from '../types/index.js';
 import { CreateSubscriptionInput } from '../schemas/subscription.schema.js';
+
+function toPublic(sub: Subscription): PublicSubscription {
+  return {
+    id: sub.id,
+    targetUrl: sub.targetUrl,
+    events: sub.events,
+    createdAt: sub.createdAt,
+  };
+}
 
 export function createSubscriptionService(store: SubscriptionStore) {
   return {
-    create(input: CreateSubscriptionInput): Subscription {
+    /** Creates a subscription and returns the public view (no secret). */
+    create(input: CreateSubscriptionInput): PublicSubscription {
       const sub: Subscription = {
         id: uuidv4(),
         targetUrl: input.targetUrl,
@@ -15,7 +25,7 @@ export function createSubscriptionService(store: SubscriptionStore) {
         createdAt: new Date(),
       };
       store.save(sub);
-      return sub;
+      return toPublic(sub);
     },
 
     delete(id: string): void {
@@ -24,14 +34,17 @@ export function createSubscriptionService(store: SubscriptionStore) {
       store.delete(id);
     },
 
-    list(): Subscription[] {
-      return store.findAll();
+    /** Returns all subscriptions without secrets. */
+    list(): PublicSubscription[] {
+      return store.findAll().map(toPublic);
     },
 
+    /** Internal use only — returns full Subscription including secret for HMAC signing. */
     findByEventType(type: KnownEventType): Subscription[] {
       return store.findByEventType(type);
     },
 
+    /** Internal use only — verifies existence. Returns full Subscription. */
     getById(id: string): Subscription {
       const sub = store.findById(id);
       if (!sub) throw new NotFoundError('Subscription', id);
